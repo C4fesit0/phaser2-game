@@ -1,4 +1,6 @@
 var AMOUNT_DIAMONDS = 30;
+var GAME_SECONDS=20;
+var AMOUNT_BOOBLES=30;
 
 //Instancia de nuestro juego
 GamePlayManager = {
@@ -13,6 +15,9 @@ GamePlayManager = {
         this.flagFirstMouseDown = false;
         this.amountDiamondsCaught = 0;
         this.endGame = false;
+
+        this.countSmile = -1;
+
     },
     //Preload es donde se cargan todos los recursos(assets) de nuestro juego
     preload: function(){
@@ -21,10 +26,32 @@ GamePlayManager = {
         game.load.spritesheet('horse', 'assets/images/horse.png', 84, 156, 2);
         game.load.spritesheet('diamonds', 'assets/images/diamonds.png', 81, 84, 4);
         game.load.spritesheet('explosion', 'assets/images/explosion.png');
+        game.load.spritesheet('mollusk', 'assets/images/mollusk.png');
+        game.load.spritesheet('shark', 'assets/images/shark.png');
+        game.load.spritesheet('fishes', 'assets/images/fishes.png');
+        game.load.spritesheet('booble1', 'assets/images/booble1.png');
+        game.load.spritesheet('booble2', 'assets/images/booble2.png');
     },
     //Phaser aca va a crear nuestro juego
     create:function(){
         game.add.sprite(0,0,'background');
+
+        this.boobleArray = [];
+        for(var i=0;i<AMOUNT_BOOBLES;i++){
+            var xBooble = game.rnd.integerInRange(1,1140);
+            var yBooble = game.rnd.integerInRange(600,950);
+        
+            var booble = game.add.sprite(xBooble,yBooble,'booble'+game.rnd.integerInRange(1,2));
+            booble.vel = 0.2 + game.rnd.frac() * 2;
+            booble.alpha = 0.9;
+            booble.scale.setTo(0.2+ game.rnd.frac());
+            this.boobleArray[i] = booble;
+        }
+
+        this.shark = game.add.sprite(500,20,'shark');
+        this.fishes = game.add.sprite(100,550,'fishes');
+        this.mollusk = game.add.sprite(500,150,'mollusk');
+
         this.horse = game.add.sprite(0,0,'horse');
         this.horse.x = game.width/2;
         this.horse.y = game.height/2;
@@ -78,8 +105,28 @@ GamePlayManager = {
 
         this.scoreText = game.add.text(game.width/2,40,'0',style);
         this.scoreText.anchor.setTo(0.5);
+
+        this.totalTime = GAME_SECONDS;
+        this.timerText = game.add.text(1000,40,this.totalTime,style);
+        this.timerText.anchor.setTo(0.5);
+
+        this.timerGameOver = game.time.events.loop(Phaser.Timer.SECOND, function(){
+            if(this.flagFirstMouseDown && !this.endGame){
+                this.totalTime--;
+                this.timerText.text = this.totalTime+'';
+                if(this.totalTime<=0){
+                    game.time.events.remove(this.timerGameOver);
+                    this.endGame = true;
+                    this.showFinalMessage('GAME OVER');
+                }
+            }
+        },this)
+
+
     },
     increaseScore:function(){
+        this.countSmile = 0;
+        this.horse.frame = 1;
         this.currentScore+=100;
         this.scoreText.text = this.currentScore;
         this.amountDiamondsCaught++;
@@ -106,6 +153,11 @@ GamePlayManager = {
         this.textFielFinalMsg.anchor.setTo(0.5);
     },
     onTap: function(){
+        if(!this.flagFirstMouseDown){
+            this.tweenMollusk = game.add.tween(this.mollusk.position).to(
+                    {y:-0.0001},5800,Phaser.Easing.Cubic.InOut,true,0,1000,true
+                ).loop(true);
+        }
         this.flagFirstMouseDown = true;
     },
     getBoundsDiamond:function(currentDiamond){
@@ -146,6 +198,35 @@ GamePlayManager = {
     //Phaser frame a frame va a llamar al metodo update
     update: function(){
         if(this.flagFirstMouseDown && !this.endGame){
+
+            for (var i = 0; i < AMOUNT_BOOBLES; i++) {
+                var booble = this.boobleArray[i];
+                booble.y-= booble.vel;
+                if(booble.y <-50){
+                    booble.y = 700;
+                    booble.x = game.rnd.integerInRange(1,1140);
+                }
+            }
+
+            if(this.countSmile >= 0){
+                this.countSmile++;
+                if(this.countSmile>50){
+                    this.countSmile=-1;
+                    this.horse.frame=0;
+                }
+            }
+
+            this.shark.x--;
+
+            if(this.shark.x<-300){
+                this.shark.x = 1300;
+            }
+
+            this.fishes.x+=0.3;
+            if(this.fishes.x > 1300){
+                this.fishes.x = -300;
+            }
+
             var pointerX = game.input.x;
             var pointerY = game.input.y;
 
